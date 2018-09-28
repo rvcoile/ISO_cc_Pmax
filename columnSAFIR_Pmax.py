@@ -17,6 +17,7 @@ from copy import deepcopy
 import pandas as pd
 import numpy as np
 import scipy.optimize as optim
+from scipy.interpolate import InterpolatedUnivariateSpline
 import time
 
 ## local function reads
@@ -66,12 +67,14 @@ def Fmax_SAFIR(filein,P0,t_target,optmethod='Nelder-Mead',deltaPconvCrit=1000,de
 	
 	## optimization ##
 	##################
-	costfunction([P0],filein,name,dfpath,t_target)
+	# costfunction([P0],filein,name,dfpath,t_target) - function call used for testing
 	if optmethod=='Nelder-Mead':
 		optionsNM={'maxiter': None, 'maxfev': None, 'xatol': 0.0001, 'fatol': 0.0001} # default options
 		optionsNM['xatol']=deltaPconvCrit
 		optionsNM['fatol']=deltaCostCrit
 		optim.minimize(costfunction,P0,args=(filein,name,dfpath,t_target),method='Nelder-Mead',options=optionsNM)
+	if optmethod=='custom':
+		Piterate_tmaxSeeker(P0,filein,dfpath,name,t_target)
 
 	## print calculation settings log ##
 	###################################
@@ -94,7 +97,6 @@ def costfunction(Pi,*args):
 
 	## run SAFIR for Pi ##
 	maxTime_i=Pi_SAFIR(pi,filein,name,sim)
-	print(maxTime_i)
 
 	## print iteration result ##
 	data[sim]=[pi*10**-3,maxTime_i/60.]
@@ -138,6 +140,93 @@ def Pi_SAFIR(Pi,filein,name='',sim=0):
 
 	return maxTime
 
+def Piterate_tmaxSeeker(P0,filein,dfpath,name,t_target,convCrit_deltat=60):
+	# custom code for load iteration - developed for concrete column
+	# iterate P, such that (maxTime_i-t_target)<convCrit_deltat
+
+	## read existing data ## - overkill - could be initialized here as well
+	data=pd.read_excel(dfpath+'.xlsx')
+
+	## initialization ##
+	sim=0; pi=P0
+	SW_nonConverged=True
+
+	## start value calculation ##
+	maxTime_i=Pi_SAFIR(pi,filein,name,sim) # maxTime for starting solution
+	data=printIteration(data,pi,maxTime_i,dfpath,sim) # print iteration result
+	SW_nonConverged=convTest_custom(maxTime_i,t_target,convCrit_deltat) # convergence on starting solution
+
+	## first iteration ##
+	if SW_nonConverged:
+		sim+=1 # update iteration
+		if (maxTime_i-t_target)>0: pi*=1.05 # maxTime_i > t_target ==> max load underestimated ==> increase load estimate with 5%
+		else: pi*=0.95 # otherwise, decrease load estimate with 5%
+	maxTime_i=Pi_SAFIR(pi,filein,name,sim) # maxTime for starting solution
+	data=printIteration(data,pi,maxTime_i,dfpath,sim) # print iteration result
+	SW_nonConverged=convTest_custom(maxTime_i,t_target,convCrit_deltat) # convergence on starting solution
+
+	## second iteration ##
+	# apply linear interpolation
+	if SW_nonConverged:
+		sim+=1 # update iteration
+		pi=interp_Pi(data,t_target,order=1) # linear interpolation on 2 first
+		maxTime_i=Pi_SAFIR(pi,filein,name,sim) # maxTime for starting solution
+		data=printIteration(data,pi,maxTime_i,dfpath,sim) # print iteration result
+		SW_nonConverged=convTest_custom(maxTime_i,t_target,convCrit_deltat) # convergence on starting solution
+
+	## further iterations ##
+	while SW_nonConverged:
+		sim+=1 # update iteration
+		pi=interp_Pi(data,t_target,order=2) # quadratic interpolation on 3 closest points
+		maxTime_i=Pi_SAFIR(pi,filein,name,sim) # maxTime for starting solution
+		data=printIteration(data,pi,maxTime_i,dfpath,sim) # print iteration result
+		SW_nonConverged=convTest_custom(maxTime_i,t_target,convCrit_deltat) # convergence on starting solution
+
+
+def interp_Pi(df,t_target,order):
+
+	## handling ##
+	# absolute dev from t_target for all iterations
+	nSim=len(df.columns)-1; simList=np.arange(nSim)
+	simData=df[simList] # reduced dataframe - iteration data only
+	dev=np.abs(simData.ix['tmax [min]']*60-t_target) # [s] deviation from target time
+	# select 2 data-points closest to target
+	iA=dev.idxmin(); dev=dev.drop(iA) # iteration closest to target and drop from list
+	iB=dev.idxmin(); dev=dev.drop(iB) # iteration closest to target and drop from list
+	# df with interpolation points - select 3rd point if order==2
+	if order==1: interpdata=simData.loc[:,[iA,iB]]
+	elif order==2:
+		iC=dev.idxmin(); dev=dev.drop(iC) # iteration closest to target and drop from list
+		interpdata=simData.loc[:,[iA,iB,iC]]
+	# sorted vector for interpolation ##
+	interpdata.sort_values('tmax [min]',axis=1,ascending=True,inplace=True)
+	xp=interpdata.loc['tmax [min]',:].values*60 # [s]
+	fp=interpdata.loc['P [kN]',:].values*10**3 # [N]
+	## interpolation / interpolating spline ##
+	# f=np.interp(t_target,xp,fp) # np.interp does not extrapolate
+	spline=InterpolatedUnivariateSpline(xp,fp,k=order,ext=0)
+	f=spline(t_target)
+	return f
+
+def printIteration(df,pi,maxTime_i,dfpath,sim):
+	# print iteration result
+	# separate function to allow for easy uniform handling
+	df[sim]=[pi*10**-3,maxTime_i/60.]
+	Print_DataFrame([df],dfpath,['iterations']) # print iteration result
+
+	return df
+
+def convTest_custom(maxTime_i,t_target,convCrit_deltat):
+	# returns SW_nonConverged
+	# separate function to allow for easy uniform handling
+	if np.abs(maxTime_i-t_target)<convCrit_deltat:
+		return False
+	return True
+
+
+
+
+
 def calcSettingLog(targetfolder,reffile,optmethod,P0,starttime,endtime,duration):
 
     with open(targetfolder+'.txt','w') as f:
@@ -174,7 +263,7 @@ if __name__ == "__main__":
 		reffile="C:\\Users\\rvcoile\\Documents\\SAFIR\\SAFIRpyTest\\PmaxSearch\\Fsearch_ref.in"
 
 		## initial axial force ##
-		P0=6*10**6 # [N]
+		P0=7*10**6 # [N]
 
 		## target ISO 834 standard fire duration ##
 		tISO=120 # [min]
@@ -188,7 +277,7 @@ if __name__ == "__main__":
 
 		## execution ##
 		# maxTime=Pi_SAFIR(P0,reffile)
-		Fmax_SAFIR(reffile,P0,tISO)
+		Fmax_SAFIR(reffile,P0,tISO,'custom')
 
 
 
@@ -199,15 +288,20 @@ if __name__ == "__main__":
 
 	else:
 
+		## data-path ##
 		filein="C:\\Users\\rvcoile\\Documents\\SAFIR\\SAFIRpyTest\\PmaxSearch\\Fsearch_ref.in"
 		dfpath='\\'.join(filein.split('\\')[0:-1])+'\\Fmax_search'
 		data=pd.read_excel(dfpath+'.xlsx')
 		print(data)
 
-		# trial
-		sim=0; Pi=6000000; maxTime_i=7200
-		data[sim]=[Pi*10**-3,maxTime_i/60.]
-		Print_DataFrame([data],dfpath,['iterations']) # print iteration result
+		## target ISO 834 standard fire duration ##
+		tISO=120 # [min]
+		tISO*=60 # [s] dimension change
+
+		## trial ##
+		pi=interp_Pi(data,tISO,order=2)
+
+		print(pi)
 
 
 
