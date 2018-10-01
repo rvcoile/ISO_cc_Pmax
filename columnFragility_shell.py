@@ -120,24 +120,11 @@ if __name__ == "__main__":
 	## SWITCH ##
 	SW_debug=False
 
-	I_test=2 # test indicator
+	I_test=3 # test indicator
 
 	###########
 	## SETUP ##
 	###########
-
-	## *.in file to be modified ##
-	reffile="C:\\Users\\rvcoile\\Documents\\Workers\\PmaxSearchShell\\reffile.in"
-
-	if I_test==1:
-		## (stoch) variable realizations ##
-		# realizations of variables to be substituted
-		# for each column realization, Pmax will be calculated
-		fc=[25.2,30.7,30.] # [MPa] 20°C concrete compressive strength realization
-		fy=[512.0,420.6,500.] # [MPa] 20°C steel yield stress realization
-		nR=len(fc)
-		X=pd.DataFrame([fc,fy],index=['fc [MPa]','fy [MPa]'],columns=np.arange(nR))
-		X=X.T # transpose(X)
 
 	if not SW_debug:
 
@@ -147,6 +134,18 @@ if __name__ == "__main__":
 
 		if I_test==1:
 
+			## *.in file to be modified ##
+			reffile="C:\\Users\\rvcoile\\Documents\\Workers\\PmaxSearchShell\\reffile.in"
+
+			## (stoch) variable realizations ##
+			# realizations of variables to be substituted
+			# for each column realization, Pmax will be calculated
+			fc=[25.2,30.7,30.] # [MPa] 20°C concrete compressive strength realization
+			fy=[512.0,420.6,500.] # [MPa] 20°C steel yield stress realization
+			nR=len(fc)
+			X=pd.DataFrame([fc,fy],index=['fc [MPa]','fy [MPa]'],columns=np.arange(nR))
+			X=X.T # transpose(X)
+
 			## create input file for each realization and perform Pmax search ##
 			# dimension variables conform SAFIR reqs
 			# column names indicate variable pointers in reference *.in file
@@ -154,6 +153,9 @@ if __name__ == "__main__":
 			multi_Fmax(df,reffile)
 
 		elif I_test==2:
+
+			## *.in file to be modified ##
+			reffile="C:\\Users\\rvcoile\\Documents\\Workers\\PmaxSearchShell\\reffile.in"
 
 			## LHS input generation ##
 			# LHS settings
@@ -211,6 +213,30 @@ if __name__ == "__main__":
 			# dimension updating
 			df=X*10**6
 			# simulation run
+			multi_Fmax(df,reffile)
+
+		elif I_test==3:
+			# test 1 + nodeline adjustment ##
+
+			## *.in file to be modified ##
+			reffile="C:\\Users\\rvcoile\\Documents\\Workers\\SAFIRshell\\reffile.in"
+
+			## (stoch) variable realizations ##
+			# realizations of variables to be substituted
+			# for each column realization, Pmax will be calculated
+			fc=[25.2,30.7,30.] # [MPa] 20°C concrete compressive strength realization
+			fy=[512.0,420.6,500.] # [MPa] 20°C steel yield stress realization
+			nR=len(fc)
+			X=pd.DataFrame([fc,fy],index=['fc [MPa]','fy [MPa]'],columns=np.arange(nR))
+			X=X.T # transpose(X)
+
+			# test 1 df
+			df=X*10**6; df.columns=['fc20', 'fy20']
+
+			# add 'nodeline_Y'
+			df['nodeline_Y']=[0.0003,0.00002,0.0001]
+
+			# run multi_Fmax
 			multi_Fmax(df,reffile)
 
 	###########
