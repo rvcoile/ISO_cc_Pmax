@@ -74,7 +74,8 @@ def multi_Fmax(df,reffile,SW_removeIterations=True):
 
 	## remove comeback log ##
 	comebackpath=os.getcwd()+'\\comeback'
-	os.remove(comebackpath)
+	try: os.remove(comebackpath)
+	except: pass
 
 	## Collect results across simulations ##
 	collectResults(df,sInfile,reffile)
@@ -156,7 +157,7 @@ if __name__ == "__main__":
 
 			## LHS input generation ##
 			# LHS settings
-			nLHS=10 # number LHS realizations
+			nLHS=2 # number LHS realizations
 			nVar=2 # number of variables
 			# r-values
 			r=LHS_rand(nLHS,nVar,'Center')
@@ -203,7 +204,8 @@ if __name__ == "__main__":
 				X[key]=ParameterRealization_r(fullvarDict[key],X[key])
 
 			## testing ##
-			Print_DataFrame([r,X],'LHS_SAFIRinput',['r','X'])
+			LHSprintPath='\\'.join(reffile.split('\\')[0:-1])+'\\LHS_SAFIRinput'
+			Print_DataFrame([r,X],LHSprintPath,['r','X'])
 
 			## SAFIR simulation
 			# dimension updating
