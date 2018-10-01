@@ -57,7 +57,7 @@ def Fmax_SAFIR(filein,P0,t_target,optmethod='Nelder-Mead',deltaPconvCrit=1000,de
 
 	## initialization ##
 	####################
-	name='' # name extension for generated *.in files
+	name='_' # name extension for generated *.in files
 	targetfolder='\\'.join(filein.split('\\')[0:-1])
 	dfpath=targetfolder+'\\Fmax_search'
 
@@ -128,7 +128,8 @@ def Pi_SAFIR(Pi,filein,name='',sim=0):
 
 	## create new *.in file ##
 	simnummer=str(sim).zfill(4) # iteration number with leading zeros (total of 4 characters)
-	fileout=filein[:-6]+name+simnummer+'.in'
+	# fileout=filein[:-6]+name+simnummer+'.in'
+	fileout=filein[:-3]+name+simnummer+'.in'
 	mod_inSAFIR(filein,fileout,modDict)
 
 	## run new *.in file ##
