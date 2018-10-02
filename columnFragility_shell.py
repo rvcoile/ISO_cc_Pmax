@@ -17,7 +17,8 @@ import sys
 import pandas as pd
 import numpy as np
 from copy import deepcopy
-# import time
+import multiprocessing as mp
+import time
 
 ## local function reads
 from columnSAFIR_Pmax import Fmax_SAFIR
@@ -90,6 +91,94 @@ def multi_Fmax(df,reffile,SW_removeIterations=True,SW_geomImperf=True,SW_probabM
 
 	## Collect results across simulations ##
 	collectResults(df,sInfile,reffile)
+
+def multi_FmaxParallel(df,reffile,SW_removeIterations=True,SW_geomImperf=True,SW_probabMaterial=False,n_proc=2):
+	## local custom code for f[Fmax_SAFIR] on multiple realizations - parallel version
+	# df: pd.DataFrame : realizations for which Fmax will be calculated
+		# dimension variables conform SAFIR reqs
+		# column names indicate variable pointers in reference *.in file
+
+	## Switches and defaults
+	SW_newfolder=True # necessary considering iteration result printing in Fmax_search.xlsx 
+	SW_removeItem=False # do not remove *.tem file when moving dir in parallel computing
+	SW_paralleldebug=False
+	
+	## initialization ## - possibly to be externalized
+	## initial axial force
+	P0=7*10**6 # [N]
+	## target ISO 834 standard fire duration ##
+	tISO=120 # [min]
+	## handling ##
+	tISO*=60 # [s] dimension change
+
+	## geometric imperfection handling ##
+		# note: (forced) interpretation of 'average eccentricity', 'out of plumbness', 'out of straightness'; cfr. SAFIR input
+		# average eccentricity handled through nodeline modification (*.tem)
+		# out of plumbness and out of straightness handled through nodal position modification (*.in)
+		# for out of plumbness, this must be revisited/confirmed
+	# Switch applied to allow to disable calculation - geomImperf does not check whether Imperf data is provided
+		# can be avoided by setting default values geomImperf input to zero within f[geomImperf]
+	if SW_geomImperf: df=geomImperf(df)
+
+	## *.in file realization ##
+	mod_inSAFIR_multifile(df,reffile,SW_newfolder)
+
+	## Pmax search for each of the generated *.in files - f[Fmax_SAFIR]
+		# can be parallellized
+	sInfile=pd.Series(index=df.index)
+	for sim in df.index:
+		# determine *.in file location
+		reffolder='\\'.join(reffile.split('\\')[0:-1])
+		if not isinstance(sim,str): simname='{0}'.format(sim).zfill(5) # assumes index is (integer) number
+		else: simname=sim
+		# new folder and file
+		newfolder=reffolder+'\\'+simname; infile=newfolder+'\\'+simname+'.in'
+		sInfile[sim]=infile
+
+	if SW_paralleldebug:
+
+		for sim in df.index:
+
+			infile=sInfile[sim]
+			arg=(infile,P0,tISO,SW_removeIterations,SW_removeItem,SW_probabMaterial)
+			parallelfunction(arg)
+
+	else:
+
+		## parallel processing for calculation jobs
+		m_ = mp.Manager()
+		p = mp.Pool(n_proc,maxtasksperchild=1)
+		q = m_.Queue()
+		jobs = p.map_async(parallelfunction, [(infile,P0,tISO,SW_removeIterations,SW_removeItem,SW_probabMaterial) for infile in sInfile])
+		time_start = time.time()
+		while True:
+			if jobs.ready():
+				print("Simulation completed in {} min.".format(str((time.time()-time_start)/60)))
+				break
+			else:
+				print("{:25}{:<10.3f}{:10}".format("Simulation progress", q.qsize() * 100 / len(df.index), "%"))
+				time.sleep(5)
+		p.close()
+
+	## Collect results across simulations ##
+	collectResults(df,sInfile,reffile)
+
+def parallelfunction(arg):
+
+	## unpack arguments
+	infile,P0,tISO,SW_removeIterations,SW_removeItem,SW_probabMaterial=arg
+	newfolder='\\'.join(infile.split('\\')[0:-1])
+	
+	## change directory
+	os.chdir(newfolder)
+
+	## run f[Fmax_SAFIR] for *.in realization
+	Fmax_SAFIR(infile,P0,tISO,'custom',SW_removeIterations=SW_removeIterations,SW_removeItem=SW_removeItem,SW_probabMaterial=SW_probabMaterial)
+
+	## remove comeback log ##
+	comebackpath=os.getcwd()+'\\comeback'
+	try: os.remove(comebackpath)
+	except: pass
 
 def collectResults(df,sInfile,reffile):
 
@@ -341,8 +430,8 @@ if __name__ == "__main__":
 			df['oos']=[0.004,0.003,0.0]
 
 			# run multi_Fmax
-			multi_Fmax(df,reffile,SW_probabMaterial=SW_probabMaterial)
-
+			# multi_Fmax(df,reffile,SW_probabMaterial=SW_probabMaterial)
+			multi_FmaxParallel(df,reffile,SW_probabMaterial=SW_probabMaterial)
 
 
 			# test 1 + nodeline adjustment ##
