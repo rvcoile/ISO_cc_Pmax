@@ -38,7 +38,7 @@ from modSAFIR import mod_inSAFIR_multifile
 ## FUNCTION ##
 ##############
 
-def multi_Fmax(df,reffile,SW_removeIterations=True,SW_geomImperf=True):
+def multi_Fmax(df,reffile,SW_removeIterations=True,SW_geomImperf=True,SW_probabMaterial=False):
 	## local custom code for f[Fmax_SAFIR] on multiple realizations
 	# df: pd.DataFrame : realizations for which Fmax will be calculated
 		# dimension variables conform SAFIR reqs
@@ -81,7 +81,7 @@ def multi_Fmax(df,reffile,SW_removeIterations=True,SW_geomImperf=True):
 			infile=reffolder+'\\'+simname+'.in'; SW_removeItem=False
 		sInfile[sim]=infile
 		# run f[Fmax_SAFIR] for *.in realization
-		Fmax_SAFIR(infile,P0,tISO,'custom',SW_removeIterations=SW_removeIterations,SW_removeItem=SW_removeItem)
+		Fmax_SAFIR(infile,P0,tISO,'custom',SW_removeIterations=SW_removeIterations,SW_removeItem=SW_removeItem,SW_probabMaterial=SW_probabMaterial)
 
 	## remove comeback log ##
 	comebackpath=os.getcwd()+'\\comeback'
@@ -315,7 +315,13 @@ if __name__ == "__main__":
 			# combine I_test 3 and 4
 
 			## *.in file to be modified ##
-			reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Imperfection\\reffileGeom.in"
+			## Switch probabSAFIR
+			SW_probabMaterial=True
+
+			if SW_probabMaterial: 
+				# reffile="C:\\Users\\rvcoile\\Documents\\Workers\\ProbabMaterial\\reffileMaterial.in"
+				reffile="C:\\Users\\rvcoile\\Documents\\Workers\\ProbabMaterial\\reffileMaterialconc.in"
+			else: reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Imperfection\\reffileGeom.in"
 
 			## (stoch) variable realizations ##
 			# realizations of variables to be substituted
@@ -335,7 +341,7 @@ if __name__ == "__main__":
 			df['oos']=[0.004,0.003,0.0]
 
 			# run multi_Fmax
-			multi_Fmax(df,reffile)
+			multi_Fmax(df,reffile,SW_probabMaterial=SW_probabMaterial)
 
 
 
