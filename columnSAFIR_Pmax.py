@@ -40,7 +40,7 @@ from postprocessSAFIR import SAFIR_maxTIME
 ## FUNCTION ##
 ##############
 
-def Fmax_SAFIR(filein,P0,t_target,optmethod='Nelder-Mead',deltaPconvCrit=1000,deltaCostCrit=60**2,SW_removeIterations=True):
+def Fmax_SAFIR(filein,P0,t_target,optmethod='Nelder-Mead',deltaPconvCrit=1000,deltaCostCrit=60**2,SW_removeIterations=True,SW_removeItem=False):
 	# iteratively searches for SAFIR maximum load value
 	#	load value to be modified indicated as "Fsearch" in *.in file
 	#	pay attention to load direction ==> link with sign in *.in file
@@ -75,7 +75,7 @@ def Fmax_SAFIR(filein,P0,t_target,optmethod='Nelder-Mead',deltaPconvCrit=1000,de
 		optionsNM['fatol']=deltaCostCrit
 		optim.minimize(costfunction,P0,args=(filein,name,dfpath,t_target,SW_removeIterations),method='Nelder-Mead',options=optionsNM)
 	if optmethod=='custom':
-		Piterate_tmaxSeeker(P0,filein,dfpath,name,t_target,SW_removeIterations)
+		Piterate_tmaxSeeker(P0,filein,dfpath,name,t_target,SW_removeIterations,SW_removeItem=SW_removeItem)
 
 	## print calculation settings log ##
 	###################################
@@ -107,7 +107,7 @@ def costfunction(Pi,*args):
 	# note: both in [s]
 	return (maxTime_i-t_target)**2
 
-def Pi_SAFIR(Pi,filein,name='',sim=0,SW_removeIterations=True):
+def Pi_SAFIR(Pi,filein,name='',sim=0,SW_removeIterations=True,SW_removeItem=False):
 	## single iteration of SAFIR calculation
 
 	## initialization ##
@@ -134,7 +134,7 @@ def Pi_SAFIR(Pi,filein,name='',sim=0,SW_removeIterations=True):
 	mod_inSAFIR(filein,fileout,modDict)
 
 	## run new *.in file ##
-	SAFIR_run(fileout)
+	SAFIR_run(fileout,SW_removeItem=SW_removeItem)
 
 	## maxTime in *.out file ##
 	outfile=deepcopy(fileout); outfile=outfile[0:-2]; outfile+='out'
@@ -152,7 +152,7 @@ def Pi_SAFIR(Pi,filein,name='',sim=0,SW_removeIterations=True):
 
 	return maxTime
 
-def Piterate_tmaxSeeker(P0,filein,dfpath,name,t_target,SW_removeIterations,convCrit_deltat=60):
+def Piterate_tmaxSeeker(P0,filein,dfpath,name,t_target,SW_removeIterations,convCrit_deltat=60,SW_removeItem=False):
 	# custom code for load iteration - developed for concrete column
 	# iterate P, such that (maxTime_i-t_target)<convCrit_deltat
 
@@ -164,7 +164,7 @@ def Piterate_tmaxSeeker(P0,filein,dfpath,name,t_target,SW_removeIterations,convC
 	SW_nonConverged=True
 
 	## start value calculation ##
-	maxTime_i=Pi_SAFIR(pi,filein,name,sim,SW_removeIterations) # maxTime for starting solution
+	maxTime_i=Pi_SAFIR(pi,filein,name,sim,SW_removeIterations,SW_removeItem) # maxTime for starting solution
 	data=printIteration(data,pi,maxTime_i,dfpath,sim) # print iteration result
 	SW_nonConverged=convTest_custom(maxTime_i,t_target,convCrit_deltat) # convergence on starting solution
 
@@ -173,7 +173,7 @@ def Piterate_tmaxSeeker(P0,filein,dfpath,name,t_target,SW_removeIterations,convC
 		sim+=1 # update iteration
 		if (maxTime_i-t_target)>0: pi*=1.05 # maxTime_i > t_target ==> max load underestimated ==> increase load estimate with 5%
 		else: pi*=0.95 # otherwise, decrease load estimate with 5%
-	maxTime_i=Pi_SAFIR(pi,filein,name,sim,SW_removeIterations) # maxTime for starting solution
+	maxTime_i=Pi_SAFIR(pi,filein,name,sim,SW_removeIterations,SW_removeItem) # maxTime for starting solution
 	data=printIteration(data,pi,maxTime_i,dfpath,sim) # print iteration result
 	SW_nonConverged=convTest_custom(maxTime_i,t_target,convCrit_deltat) # convergence on starting solution
 
@@ -182,7 +182,7 @@ def Piterate_tmaxSeeker(P0,filein,dfpath,name,t_target,SW_removeIterations,convC
 	if SW_nonConverged:
 		sim+=1 # update iteration
 		pi=interp_Pi(data,t_target,order=1) # linear interpolation on 2 first
-		maxTime_i=Pi_SAFIR(pi,filein,name,sim,SW_removeIterations) # maxTime for starting solution
+		maxTime_i=Pi_SAFIR(pi,filein,name,sim,SW_removeIterations,SW_removeItem) # maxTime for starting solution
 		data=printIteration(data,pi,maxTime_i,dfpath,sim) # print iteration result
 		SW_nonConverged=convTest_custom(maxTime_i,t_target,convCrit_deltat) # convergence on starting solution
 
@@ -190,7 +190,7 @@ def Piterate_tmaxSeeker(P0,filein,dfpath,name,t_target,SW_removeIterations,convC
 	while SW_nonConverged:
 		sim+=1 # update iteration
 		pi=interp_Pi(data,t_target,order=2) # quadratic interpolation on 3 closest points
-		maxTime_i=Pi_SAFIR(pi,filein,name,sim,SW_removeIterations) # maxTime for starting solution
+		maxTime_i=Pi_SAFIR(pi,filein,name,sim,SW_removeIterations,SW_removeItem) # maxTime for starting solution
 		data=printIteration(data,pi,maxTime_i,dfpath,sim) # print iteration result
 		SW_nonConverged=convTest_custom(maxTime_i,t_target,convCrit_deltat) # convergence on starting solution
 

@@ -75,11 +75,13 @@ def multi_Fmax(df,reffile,SW_removeIterations=True,SW_geomImperf=True):
 		reffolder='\\'.join(reffile.split('\\')[0:-1])
 		if not isinstance(sim,str): simname='{0}'.format(sim).zfill(5) # assumes index is (integer) number
 		else: simname=sim
-		if SW_newfolder: infile=reffolder+'\\'+simname+'\\'+simname+'.in'
-		else: infile=reffolder+'\\'+simname+'.in'
+		if SW_newfolder: 
+			infile=reffolder+'\\'+simname+'\\'+simname+'.in'; SW_removeItem=True
+		else: 
+			infile=reffolder+'\\'+simname+'.in'; SW_removeItem=False
 		sInfile[sim]=infile
 		# run f[Fmax_SAFIR] for *.in realization
-		Fmax_SAFIR(infile,P0,tISO,'custom',SW_removeIterations=SW_removeIterations)
+		Fmax_SAFIR(infile,P0,tISO,'custom',SW_removeIterations=SW_removeIterations,SW_removeItem=SW_removeItem)
 
 	## remove comeback log ##
 	comebackpath=os.getcwd()+'\\comeback'
