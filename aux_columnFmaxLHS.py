@@ -6,12 +6,31 @@
 # support functions for masterfile for ISO column LHS calculation
 # 
 
+#####################
+## REFERENCE PATHS ##
+#####################
+
+## python paths
+rvcpyPath="C:/Users/rvcoile/Google Drive/Research/Codes/Python3.6/REF/rvcpy"
+
 ####################
 ## MODULE IMPORTS ##
 ####################
 
 ## standard module reads
+import sys
+import pandas as pd
 from copy import deepcopy
+
+## local function reads
+from columnFragility_shell import multi_FmaxParallel, multi_Fmax
+
+## distant function reads
+directory=rvcpyPath
+sys.path.append(directory)
+from PrintAuxiliary import Print_DataFrame
+from LatinHypercube import LHS_rand
+from probabCalc_2018 import ParameterRealization_r, VarDict_to_df
 
 
 ##############
@@ -137,6 +156,31 @@ def dimCorrSAFIR(varDictDict):
 			varDictDictout[var]['m']/=10**3
 			varDictDictout[var]['s']/=10**3
 	return varDictDictout
+
+def LHSFmax(SW_givenLHS,fixedLHSpath,start,nSim,nVar,totalvarDict,fullvarDict,reffile,SW_probabMaterial,nProc=1):
+
+	# r-values
+	if SW_givenLHS:
+		# fixedLHSpath defined as reference path
+		r=pd.read_excel(fixedLHSpath); r=r.iloc[start:start+nSim,:]
+		print(r)
+	else: 
+		r=LHS_rand(nSim,nVar,'Center')
+	# parameter realization
+	r.columns=list(fullvarDict.keys()) # r-value assignment to variables
+	X=deepcopy(r); Xref=deepcopy(r)
+	for key in fullvarDict.keys(): # variable realization
+		X[key]=ParameterRealization_r(fullvarDict[key],X[key])
+		Xref[key]=ParameterRealization_r(totalvarDict[key],Xref[key])
+	# printing
+	LHSprintPath='\\'.join(reffile.split('\\')[0:-1])+'\\LHS_SAFIRinput'
+	Print_DataFrame([r,Xref,X],LHSprintPath,['r','Xref','X'])
+
+	## run multi_Fmax
+	if nProc==1:
+		multi_Fmax(X,reffile,SW_probabMaterial=SW_probabMaterial)
+	else:
+		multi_FmaxParallel(X,reffile,SW_probabMaterial=SW_probabMaterial,n_proc=nProc)
 
 ####################
 ## CONTROL CENTER ##
