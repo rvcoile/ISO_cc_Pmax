@@ -10,6 +10,17 @@
 #		- concrete cover variability
 #		- concrete retention factor uncertainty
 
+#####################
+## REFERENCE PATHS ##
+#####################
+
+## python paths
+rvcpyPath="C:/Users/rvcoile/Google Drive/Research/Codes/Python3.6/REF/rvcpy"
+
+## reference files
+reffile="C:\\Users\\rvcoile\\Documents\\Workers\\ProbabMaterial\\reffileMaterialconc.in"
+fixedLHSpath='C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\refValues\\LHScenter_10000_6var.xlsx'
+
 ####################
 ## MODULE IMPORTS ##
 ####################
@@ -26,7 +37,7 @@ from columnFragility_shell import multi_FmaxParallel, multi_Fmax
 from aux_columnFmaxLHS import localStochVar, dimCorrSAFIR
 
 ## distant function reads
-directory="C:/Users/rvcoile/Google Drive/Research/Codes/Python3.6/REF/rvcpy"
+directory=rvcpyPath
 sys.path.append(directory)
 from PrintAuxiliary import Print_DataFrame
 from LatinHypercube import LHS_rand
@@ -66,10 +77,8 @@ if __name__ == "__main__":
 		else:
 
 			## initialization ##
+			# reffile defined at reference paths
 			nLHS=6 # number LHS realizations
-
-			## reffile ##
-			reffile="C:\\Users\\rvcoile\\Documents\\Workers\\ProbabMaterial\\reffileMaterialconc.in"
 
 			## (stoch) variable realizations ##
 			totalvarDict=localStochVar() # varDict with original dimensions
@@ -80,7 +89,7 @@ if __name__ == "__main__":
 			nVar=len(fullvarDict.keys())
 			# r-values
 			if SW_givenLHS:
-				fixedLHSpath='C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\refValues\\LHScenter_10000_6var.xlsx'
+				# fixedLHSpath defined as reference path
 				r=pd.read_excel(fixedLHSpath); r=r.iloc[start:start+nSim,:]
 				print(r)
 			else: 
@@ -96,8 +105,8 @@ if __name__ == "__main__":
 			Print_DataFrame([r,Xref,X],LHSprintPath,['r','Xref','X'])
 
 			## run multi_Fmax
-			# multi_Fmax(X,reffile,SW_probabMaterial=SW_probabMaterial)
-			multi_FmaxParallel(X,reffile,SW_probabMaterial=SW_probabMaterial)
+			multi_Fmax(X,reffile,SW_probabMaterial=SW_probabMaterial)
+			# multi_FmaxParallel(X,reffile,SW_probabMaterial=SW_probabMaterial)
 
 	## Debug ##
 	###########

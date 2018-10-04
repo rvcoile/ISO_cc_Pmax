@@ -6,6 +6,20 @@
 # search for Pmax SAFIR column calculation
 #
 
+#####################
+## REFERENCE PATHS ##
+#####################
+
+## SAFIR exe path
+probabSAFIRpath="C:\\SAFIR\\SAFIR2016c0_proba.exe"
+
+## python paths
+rvcpyPath="C:/Users/rvcoile/Google Drive/Research/Codes/Python3.6/REF/rvcpy"
+SAFIRpyPath="C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\Python3.6\\SAFIRpy"
+
+## reference files
+
+
 
 ####################
 ## MODULE IMPORTS ##
@@ -25,11 +39,11 @@ import time
 # NONE
 
 ## distant function reads
-directory="C:/Users/rvcoile/Google Drive/Research/Codes/Python3.6/REF/rvcpy"
+directory=rvcpyPath
 sys.path.append(directory)
 from PrintAuxiliary import Print_DataFrame
 
-directory="C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\Python3.6\\SAFIRpy"
+directory=SAFIRpyPath
 sys.path.append(directory)
 from modSAFIR import mod_inSAFIR
 from runSAFIR import SAFIR_run
@@ -114,7 +128,7 @@ def Pi_SAFIR(Pi,filein,name='',sim=0,SW_removeIterations=True,SW_removeItem=Fals
 	####################
 
 	## path probabSAFIR ## - application optional ifo SW_ProbabMaterial
-	probabSAFIRpath="C:\\SAFIR\\SAFIR2016c0_proba.exe"
+	global probabSAFIRpath
 
 	## Variables to be modified ##
 	ref00='Fsearch'
