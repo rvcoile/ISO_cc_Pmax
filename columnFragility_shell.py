@@ -39,7 +39,7 @@ from modSAFIR import mod_inSAFIR_multifile
 ## FUNCTION ##
 ##############
 
-def multi_Fmax(df,reffile,SW_removeIterations=True,SW_geomImperf=True,SW_probabMaterial=False):
+def multi_Fmax(df,reffile,tISO,SW_removeIterations=True,SW_geomImperf=True,SW_probabMaterial=False):
 	## local custom code for f[Fmax_SAFIR] on multiple realizations
 	# df: pd.DataFrame : realizations for which Fmax will be calculated
 		# dimension variables conform SAFIR reqs
@@ -52,8 +52,7 @@ def multi_Fmax(df,reffile,SW_removeIterations=True,SW_geomImperf=True,SW_probabM
 	## initial axial force
 	P0=7*10**6 # [N]
 	## target ISO 834 standard fire duration ##
-	tISO=120 # [min]
-	## handling ##
+	# handling: input tISO in [min]
 	tISO*=60 # [s] dimension change
 
 	## geometric imperfection handling ##
@@ -92,7 +91,7 @@ def multi_Fmax(df,reffile,SW_removeIterations=True,SW_geomImperf=True,SW_probabM
 	## Collect results across simulations ##
 	collectResults(df,sInfile,reffile)
 
-def multi_FmaxParallel(df,reffile,SW_removeIterations=True,SW_geomImperf=True,SW_probabMaterial=False,n_proc=2):
+def multi_FmaxParallel(df,reffile,tISO,SW_removeIterations=True,SW_geomImperf=True,SW_probabMaterial=False,n_proc=2):
 	## local custom code for f[Fmax_SAFIR] on multiple realizations - parallel version
 	# df: pd.DataFrame : realizations for which Fmax will be calculated
 		# dimension variables conform SAFIR reqs
@@ -107,8 +106,7 @@ def multi_FmaxParallel(df,reffile,SW_removeIterations=True,SW_geomImperf=True,SW
 	## initial axial force
 	P0=7*10**6 # [N]
 	## target ISO 834 standard fire duration ##
-	tISO=120 # [min]
-	## handling ##
+	# handling: input tISO in [min
 	tISO*=60 # [s] dimension change
 
 	## geometric imperfection handling ##
@@ -159,6 +157,7 @@ def multi_FmaxParallel(df,reffile,SW_removeIterations=True,SW_geomImperf=True,SW
 				print("{:25}{:<10.3f}{:10}".format("Simulation progress", q.qsize() * 100 / len(df.index), "%"))
 				time.sleep(5)
 		p.close()
+		p.join()
 
 	## Collect results across simulations ##
 	collectResults(df,sInfile,reffile)
@@ -180,7 +179,7 @@ def parallelfunction(arg):
 	try: os.remove(comebackpath)
 	except: pass
 
-def collectResults(df,sInfile,reffile):
+def collectResults(df,sInfile,reffile,SW_rerun=False,P0=None,tISO=None,SW_probabMaterial=None):
 
 	## Collect results across simulations ##
 	sFmax=pd.Series(index=df.index)
@@ -191,7 +190,17 @@ def collectResults(df,sInfile,reffile):
 		infile=sInfile[sim]
 		searchLog_path='\\'.join(infile.split('\\')[0:-1])+'\\Fmax_search.xlsx'
 		# open logfile and select Pmax
-		searchLog=pd.read_excel(searchLog_path)
+		if SW_rerun:
+			try: 
+				searchLog=pd.read_excel(searchLog_path)
+			except:
+				# searchLog does not exist - redo calculation
+				# default parameters - DANGER - USE WITH CAUTION
+				SW_removeIterations=True
+				SW_removeItem=True
+				Fmax_SAFIR(infile,P0,tISO,'custom',SW_removeIterations=SW_removeIterations,SW_removeItem=SW_removeItem,SW_probabMaterial=SW_probabMaterial)				
+				searchLog=pd.read_excel(searchLog_path)
+		else: searchLog=pd.read_excel(searchLog_path)
 		Pmax=searchLog.loc['P [kN]'].iloc[-1]
 		tE=searchLog.loc['tmax [min]'].iloc[-1]
 		# assign result

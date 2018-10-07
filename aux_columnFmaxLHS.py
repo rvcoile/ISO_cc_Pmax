@@ -24,7 +24,7 @@ import pandas as pd
 from copy import deepcopy
 
 ## local function reads
-from columnFragility_shell import multi_FmaxParallel, multi_Fmax
+from columnFragility_shell import multi_FmaxParallel, multi_Fmax, collectResults
 
 ## distant function reads
 directory=rvcpyPath
@@ -38,7 +38,7 @@ from probabCalc_2018 import ParameterRealization_r, VarDict_to_df
 ## FUNCTION ##
 ##############
 
-def collectResults(numList,reffile):
+def collectResults_subGroups(numList,reffile):
 	# collect results from sub-folders - apply when SW_perform100
 		# numList: list of startnumbers subcalcs
 		# reffile: original *.in reffile - defines target directory
@@ -190,7 +190,7 @@ def dimCorrSAFIR(varDictDict):
 			varDictDictout[var]['s']/=10**3
 	return varDictDictout
 
-def LHSFmax(SW_givenLHS,fixedLHSpath,start,nSim,nVar,totalvarDict,fullvarDict,reffile,SW_probabMaterial,nProc=1):
+def LHSFmax(SW_givenLHS,fixedLHSpath,start,nSim,nVar,totalvarDict,fullvarDict,reffile,SW_probabMaterial,tISO,nProc=1):
 
 	# r-values
 	if SW_givenLHS:
@@ -211,27 +211,64 @@ def LHSFmax(SW_givenLHS,fixedLHSpath,start,nSim,nVar,totalvarDict,fullvarDict,re
 
 	## run multi_Fmax
 	if nProc==1:
-		multi_Fmax(X,reffile,SW_probabMaterial=SW_probabMaterial)
+		multi_Fmax(X,reffile,tISO,SW_probabMaterial=SW_probabMaterial)
 	else:
-		multi_FmaxParallel(X,reffile,SW_probabMaterial=SW_probabMaterial,n_proc=nProc)
+		multi_FmaxParallel(X,reffile,tISO,SW_probabMaterial=SW_probabMaterial,n_proc=nProc)
+
+def collectRealizations_postFail(reffile,fixedLHSpath,start,nSim,P0,tISO,SW_probabMaterial):
+	## collect results from individual realizations after glitch ##
+	print("Reconstructing")
+
+	# functions of initialization
+	totalvarDict=localStochVar() # varDict with original dimensions
+	fullvarDict=dimCorrSAFIR(totalvarDict)
+
+	## df reconstruction ##
+	# df == X in current *.py
+	r=pd.read_excel(fixedLHSpath); r=r.iloc[start:start+nSim,:]
+	r.columns=list(fullvarDict.keys()) # r-value assignment to variables
+	X=deepcopy(r)
+	for key in fullvarDict.keys(): # variable realization
+		X[key]=ParameterRealization_r(fullvarDict[key],X[key])
+	df=X # assign df
+
+	## sInfile reconstruction ##
+	sInfile=pd.Series(index=df.index)
+	for sim in df.index:
+		# determine *.in file location
+		reffolder='\\'.join(reffile.split('\\')[0:-1])
+		if not isinstance(sim,str): simname='{0}'.format(sim).zfill(5) # assumes index is (integer) number
+		else: simname=sim
+		infile=reffolder+'\\'+simname+'\\'+simname+'.in'
+		sInfile[sim]=infile
+
+	## collect results from realization subfolders ##
+	SW_rerun=True # [boolean] try to open file and rerun calc if failure
+	collectResults(df,sInfile,reffile,SW_rerun,P0,tISO,SW_probabMaterial)
+
 
 
 ####################
 ## CONTROL CENTER ##
 ####################
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
 
-	# totalvarDict=localStochVar()
-	# print(totalvarDict.keys())
+	# main reffile path and LHS data path
+	reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Res_ISO_c\\reffileFull.in"	
+	fixedLHSpath='C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\refValues\\LHScenter_10000_6var.xlsx'
+
+	# sim parameters
+	start=2500
+	nSim=100
+	P0=7*10**6 # [N]
+	tISO=120*60 # [s]
+	SW_probabMaterial=True
 
 	# reffile
-	reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Probab\\reffileFull.in"
+	reffile='\\'.join(reffile.split('\\')[0:-1])+'\\'+str(start)+'\\'+reffile.split('\\')[-1]
 
-	# simulation series
-	start=2500
-	end=3100
-	startList=np.arange(start,end,100)
+	print(reffile)
+	# collect realizations
+	collectRealizations_postFail(reffile,fixedLHSpath,start,nSim,P0,tISO,SW_probabMaterial)
 	
-	# collect results
-	collectResults(startList,reffile)

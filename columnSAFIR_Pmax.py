@@ -151,6 +151,7 @@ def Pi_SAFIR(Pi,filein,name='',sim=0,SW_removeIterations=True,SW_removeItem=Fals
 	mod_inSAFIR(filein,fileout,modDict)
 
 	## run new *.in file ##
+	print("Run SAFIR ",fileout)
 	if SW_probabMaterial:
 		SAFIR_run(fileout,probabSAFIRpath,SW_removeItem=SW_removeItem)
 	else: SAFIR_run(fileout,SW_removeItem=SW_removeItem)

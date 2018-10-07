@@ -63,8 +63,8 @@ if __name__ == "__main__":
 
 	## fixed LHS sampling scheme ##
 	SW_givenLHS=True # [boolean] use precalculated LHS scheme - benefit for repeatability
-	start=2500 # start number simulation
-	nSim=1000 # number of simulations to run
+	start=0 # start number simulation
+	nSim=300 # number of simulations to run
 
 	## number of processors ##
 	nProc=3
@@ -85,6 +85,7 @@ if __name__ == "__main__":
 
 			## initialization ##
 			# reffile defined at reference paths
+			tISO=240 # [min] - target ISO 834 standard fire duration (target time of failure)
 
 			## (stoch) variable realizations ##
 			totalvarDict=localStochVar() # varDict with original dimensions
@@ -108,10 +109,10 @@ if __name__ == "__main__":
 					temtargetpath=subdir+'\\'+temname # path for *.tem in subdir
 					shutil.copy(temfilepath,temtargetpath) # copy reffile to subdir - overhead which may be removed					
 					# perform LHS calculation for 100 sim
-					LHSFmax(SW_givenLHS,fixedLHSpath,starter,100,nVar,totalvarDict,fullvarDict,subreffile,SW_probabMaterial,nProc)
-				collectResults(startList,reffile)
+					LHSFmax(SW_givenLHS,fixedLHSpath,starter,100,nVar,totalvarDict,fullvarDict,subreffile,SW_probabMaterial,tISO,nProc)
+				collectResults_subGroups(startList,reffile)
 			else:
-				LHSFmax(SW_givenLHS,fixedLHSpath,start,nSim,nVar,totalvarDict,fullvarDict,reffile,SW_probabMaterial,nProc)
+				LHSFmax(SW_givenLHS,fixedLHSpath,start,nSim,nVar,totalvarDict,fullvarDict,reffile,SW_probabMaterial,tISO,nProc)
 
 
 	## Debug ##
@@ -158,10 +159,31 @@ if __name__ == "__main__":
 			Print_DataFrame([r],'LHS_{0}_{1}var'.format(nLHS,nVar),['r'])
 
 		elif Itest==3:
-			# LHS input generation - to be used for generating input r-sets for repeatability
+			## collect results from realization subfolders - partial application of full code
 
-			nLHS=10000; nVar=6
-		
-			r=LHS_rand(nLHS,nVar,'Center')
-			# Print_DataFrame([r],'LHS_{0}_{1}var'.format(nLhS,nVar),['{0}'.format(nVar).zfill(2)])
-			Print_DataFrame([r],'LHS_{0}_{1}var'.format(nLHS,nVar),['r'])
+			## initialization ##
+			tISO=120 # [min] - target ISO 834 standard fire duration (target time of failure)
+			totalvarDict=localStochVar() # varDict with original dimensions
+			fullvarDict=dimCorrSAFIR(totalvarDict)
+			nVar=len(fullvarDict.keys())
+
+
+
+			## perform per 100 - or full calculation
+			if SW_perform100:
+				# perform LHS calculation per 100 for ease of follow up and calculation interruptions
+				startList=np.arange(start,start+nSim,100)
+				for starter in startList:
+					# create new subfolder and copy *.in and *.tem to subfolder
+					subdir='\\'.join(reffile.split('\\')[0:-1])+'\\{0}'.format(starter).zfill(4)
+					os.mkdir(subdir) # WIP - error raised if directory already exists
+					subreffile=subdir+'\\'+reffile.split('\\')[-1]
+					shutil.copy(reffile,subreffile) # copy reffile to subdir - overhead which may be removed
+					temfilepath,temname=SAFIR_TEMinIN(reffile) # determine *.tem file (full path - *.in directory assumed)
+					temtargetpath=subdir+'\\'+temname # path for *.tem in subdir
+					shutil.copy(temfilepath,temtargetpath) # copy reffile to subdir - overhead which may be removed					
+					# perform LHS calculation for 100 sim
+					LHSFmax(SW_givenLHS,fixedLHSpath,starter,100,nVar,totalvarDict,fullvarDict,subreffile,SW_probabMaterial,tISO,nProc)
+				collectResults_subGroups(startList,reffile)
+			else:
+				LHSFmax(SW_givenLHS,fixedLHSpath,start,nSim,nVar,totalvarDict,fullvarDict,reffile,SW_probabMaterial,tISO,nProc)
