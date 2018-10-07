@@ -255,18 +255,19 @@ def collectRealizations_postFail(reffile,fixedLHSpath,start,nSim,P0,tISO,SW_prob
 if __name__ == "__main__":
 
 	# main reffile path and LHS data path
-	reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Res_ISO_c\\reffileFull.in"	
+	reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Probab\\reffileFull.in"	
 	fixedLHSpath='C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\refValues\\LHScenter_10000_6var.xlsx'
 
 	# sim parameters
-	start=2500
-	nSim=100
+	start=0
+	nSim=300
 	P0=7*10**6 # [N]
-	tISO=120*60 # [s]
+	tISO=240*60 # [s]
 	SW_probabMaterial=True
 
 	# reffile
-	reffile='\\'.join(reffile.split('\\')[0:-1])+'\\'+str(start)+'\\'+reffile.split('\\')[-1]
+	# reffile='\\'.join(reffile.split('\\')[0:-1])+'\\'+str(start)+'\\'+reffile.split('\\')[-1]
+	reffile='\\'.join(reffile.split('\\')[0:-1])+'\\0000\\'+reffile.split('\\')[-1]
 
 	print(reffile)
 	# collect realizations

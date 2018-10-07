@@ -19,7 +19,7 @@ rvcpyPath="C:/Users/rvcoile/Google Drive/Research/Codes/Python3.6/REF/rvcpy"
 SAFIRpyPath="C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\Python3.6\\SAFIRpy"
 
 ## reference files
-reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Probab\\reffileFull.in"
+reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Probab2\\reffileFull.in"
 fixedLHSpath='C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\refValues\\LHScenter_10000_6var.xlsx'
 
 ####################
@@ -35,7 +35,7 @@ import numpy as np
 from copy import deepcopy
 
 ## local function reads
-from aux_columnFmaxLHS import localStochVar, dimCorrSAFIR, LHSFmax, collectResults
+from aux_columnFmaxLHS import localStochVar, dimCorrSAFIR, LHSFmax, collectResults_subGroups
 
 ## distant function reads
 directory=rvcpyPath
@@ -101,7 +101,8 @@ if __name__ == "__main__":
 				startList=np.arange(start,start+nSim,100)
 				for starter in startList:
 					# create new subfolder and copy *.in and *.tem to subfolder
-					subdir='\\'.join(reffile.split('\\')[0:-1])+'\\{0}'.format(starter).zfill(4)
+					refdir='\\'.join(reffile.split('\\')[0:-1])
+					subdir=refdir+'\\'+'{0}'.format(starter).zfill(4)
 					os.mkdir(subdir) # WIP - error raised if directory already exists
 					subreffile=subdir+'\\'+reffile.split('\\')[-1]
 					shutil.copy(reffile,subreffile) # copy reffile to subdir - overhead which may be removed
