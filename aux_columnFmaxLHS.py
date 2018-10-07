@@ -19,6 +19,7 @@ rvcpyPath="C:/Users/rvcoile/Google Drive/Research/Codes/Python3.6/REF/rvcpy"
 
 ## standard module reads
 import sys
+import numpy as np
 import pandas as pd
 from copy import deepcopy
 
@@ -36,6 +37,38 @@ from probabCalc_2018 import ParameterRealization_r, VarDict_to_df
 ##############
 ## FUNCTION ##
 ##############
+
+def collectResults(numList,reffile):
+	# collect results from sub-folders - apply when SW_perform100
+		# numList: list of startnumbers subcalcs
+		# reffile: original *.in reffile - defines target directory
+
+	## targetdir
+	targetdir='\\'.join(reffile.split('\\')[0:-1])
+
+	## collect for numList
+	for i, num in enumerate(numList):
+		## data collection
+		subdir=targetdir+'\\{0}'.format(num).zfill(4)
+		local_out=pd.read_excel(subdir+'\\output.xlsx','out') # local output
+		xl = pd.ExcelFile(subdir+'\\LHS_SAFIRinput.xlsx') # *.xlsx with input values
+		local_r=xl.parse("r") # r-values input
+		local_Xref=xl.parse("Xref") # Xref-values input (original dimensions)
+		local_X=xl.parse("X") # X-values input (SAFIR dimensions)
+
+		## output printing
+		if i==0: out=deepcopy(local_out); r=deepcopy(local_r); Xref=deepcopy(local_Xref); X=deepcopy(local_X)
+		else:
+			out=pd.concat([out,local_out])
+			r=pd.concat([r,local_r])
+			Xref=pd.concat([Xref,local_Xref])
+			X=pd.concat([X,local_X])
+
+	## print output
+	Print_DataFrame([r,Xref,X,out],targetdir+'\\totaldata',['r','Xref','X','out'])
+	Print_DataFrame([r,Xref,X],targetdir+'\\LHS_SAFIRinput',['r','Xref','X'])
+	Print_DataFrame([out],targetdir+'\\out',['out'])
+
 
 def localStochVar():
 	# stochastic variable definition
@@ -182,12 +215,23 @@ def LHSFmax(SW_givenLHS,fixedLHSpath,start,nSim,nVar,totalvarDict,fullvarDict,re
 	else:
 		multi_FmaxParallel(X,reffile,SW_probabMaterial=SW_probabMaterial,n_proc=nProc)
 
+
 ####################
 ## CONTROL CENTER ##
 ####################
 
 if __name__ == "__main__": 
 
-	totalvarDict=localStochVar()
+	# totalvarDict=localStochVar()
+	# print(totalvarDict.keys())
 
-	print(totalvarDict.keys())
+	# reffile
+	reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Probab\\reffileFull.in"
+
+	# simulation series
+	start=2500
+	end=3100
+	startList=np.arange(start,end,100)
+	
+	# collect results
+	collectResults(startList,reffile)

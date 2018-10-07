@@ -35,7 +35,7 @@ import numpy as np
 from copy import deepcopy
 
 ## local function reads
-from aux_columnFmaxLHS import localStochVar, dimCorrSAFIR, LHSFmax
+from aux_columnFmaxLHS import localStochVar, dimCorrSAFIR, LHSFmax, collectResults
 
 ## distant function reads
 directory=rvcpyPath
@@ -109,6 +109,7 @@ if __name__ == "__main__":
 					shutil.copy(temfilepath,temtargetpath) # copy reffile to subdir - overhead which may be removed					
 					# perform LHS calculation for 100 sim
 					LHSFmax(SW_givenLHS,fixedLHSpath,starter,100,nVar,totalvarDict,fullvarDict,subreffile,SW_probabMaterial,nProc)
+				collectResults(startList,reffile)
 			else:
 				LHSFmax(SW_givenLHS,fixedLHSpath,start,nSim,nVar,totalvarDict,fullvarDict,reffile,SW_probabMaterial,nProc)
 
