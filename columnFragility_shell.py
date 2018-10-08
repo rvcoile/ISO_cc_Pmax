@@ -154,11 +154,13 @@ def multi_FmaxParallel(df,reffile,tISO,SW_removeIterations=True,SW_geomImperf=Tr
 				print("Simulation completed in {} min.".format(str((time.time()-time_start)/60)))
 				break
 			else:
-				print("{:25}{:<10.3f}{:10}".format("Simulation progress", q.qsize() * 100 / len(df.index), "%"))
-				time.sleep(5)
+				# print("{:25}{:<10.3f}{:10}".format("Simulation progress", q.qsize() * 100 / len(df.index), "%"))
+				# time.sleep(5)
+				pass
+		jobs.wait()
 		p.close()
 		p.join()
-		j=jobs.get() # introducing code as a random patch - cfr. issue not all entries run
+		# j=jobs.get() # introducing code as a random patch - cfr. issue not all entries run
 
 	## Collect results across simulations ##
 	collectResults(df,sInfile,reffile)
