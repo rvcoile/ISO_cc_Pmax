@@ -39,7 +39,7 @@ from modSAFIR import mod_inSAFIR_multifile
 ## FUNCTION ##
 ##############
 
-def multi_Fmax(df,reffile,tISO,SW_removeIterations=True,SW_geomImperf=True,SW_probabMaterial=False):
+def multi_Fmax(df,reffile,tISO,SW_removeIterations=True,SW_geomImperf=True,SW_probabMaterial=False,P0=7*10**6):
 	## local custom code for f[Fmax_SAFIR] on multiple realizations
 	# df: pd.DataFrame : realizations for which Fmax will be calculated
 		# dimension variables conform SAFIR reqs
@@ -50,7 +50,7 @@ def multi_Fmax(df,reffile,tISO,SW_removeIterations=True,SW_geomImperf=True,SW_pr
 
 	## initialization ## - possibly to be externalized
 	## initial axial force
-	P0=7*10**6 # [N]
+	P0 # [N]
 	## target ISO 834 standard fire duration ##
 	# handling: input tISO in [min]
 	tISO*=60 # [s] dimension change

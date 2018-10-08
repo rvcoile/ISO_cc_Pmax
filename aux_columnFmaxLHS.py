@@ -246,7 +246,44 @@ def collectRealizations_postFail(reffile,fixedLHSpath,start,nSim,P0,tISO,SW_prob
 	SW_rerun=True # [boolean] try to open file and rerun calc if failure
 	collectResults(df,sInfile,reffile,SW_rerun,P0,tISO,SW_probabMaterial)
 
+def runSpecificCases(reffile,fixedLHSpath,simList,P0,tISO,SW_probabMaterial,nProc=1):
+	## run specific cases on demand ##
+	print("Specific calculation runs")
 
+	# hardcoded defaults
+	SW_removeIterations=True
+
+	# functions of initialization
+	totalvarDict=localStochVar() # varDict with original dimensions
+	fullvarDict=dimCorrSAFIR(totalvarDict)
+
+	## df reconstruction ##
+	# df == X in current *.py
+	r=pd.read_excel(fixedLHSpath); r=r.loc[simList,:]
+	r.columns=list(fullvarDict.keys()) # r-value assignment to variables
+	X=deepcopy(r); Xref=deepcopy(X)
+	for key in fullvarDict.keys(): # variable realization
+		X[key]=ParameterRealization_r(fullvarDict[key],X[key])
+		Xref[key]=ParameterRealization_r(totalvarDict[key],Xref[key])
+	df=X # assign df
+
+	## sInfile construction ##
+	sInfile=pd.Series(index=df.index)
+	for sim in df.index:
+		# determine *.in file location
+		reffolder='\\'.join(reffile.split('\\')[0:-1])
+		if not isinstance(sim,str): simname='{0}'.format(sim).zfill(5) # assumes index is (integer) number
+		else: simname=sim
+		infile=reffolder+'\\'+simname+'\\'+simname+'.in'; SW_removeItem=True
+		sInfile[sim]=infile
+	LHSprintPath='\\'.join(reffile.split('\\')[0:-1])+'\\LHS_SAFIRinput'
+	Print_DataFrame([r,Xref,X],LHSprintPath,['r','Xref','X'])
+
+	## calculation of simulations ##
+	if nProc==1:
+		multi_Fmax(df,reffile,tISO/60,SW_removeIterations=SW_removeItem,SW_probabMaterial=SW_probabMaterial,P0=P0)		
+	else:
+		multi_FmaxParallel(df,reffile,tISO/60,SW_removeIterations=SW_removeItem,SW_probabMaterial=SW_probabMaterial,n_proc=nProc,P0=P0)
 
 ####################
 ## CONTROL CENTER ##
@@ -254,22 +291,54 @@ def collectRealizations_postFail(reffile,fixedLHSpath,start,nSim,P0,tISO,SW_prob
 
 if __name__ == "__main__":
 
-	# main reffile path and LHS data path
-	reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Probab\\reffileFull.in"	
-	fixedLHSpath='C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\refValues\\LHScenter_10000_6var.xlsx'
+	####################
+	## LOCAL SWITCHES ##
+	####################
 
-	# sim parameters
-	start=0
-	nSim=300
-	P0=7*10**6 # [N]
-	tISO=240*60 # [s]
-	SW_probabMaterial=True
+	Action='specificCases' # 'collectPostFail'; 'specificCases'
 
-	# reffile
-	# reffile='\\'.join(reffile.split('\\')[0:-1])+'\\'+str(start)+'\\'+reffile.split('\\')[-1]
-	reffile='\\'.join(reffile.split('\\')[0:-1])+'\\0000\\'+reffile.split('\\')[-1]
+	if Action == 'collectPostFail':
+		## collecting results post run failure, including rerun of non-calculated realizations
 
-	print(reffile)
-	# collect realizations
-	collectRealizations_postFail(reffile,fixedLHSpath,start,nSim,P0,tISO,SW_probabMaterial)
-	
+		# main reffile path and LHS data path
+		reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Probab\\reffileFull.in"	
+		fixedLHSpath='C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\refValues\\LHScenter_10000_6var.xlsx'
+
+		# sim parameters
+		start=0
+		nSim=300
+		P0=7*10**6 # [N]
+		tISO=240*60 # [s]
+		SW_probabMaterial=True
+
+		# reffile
+		# reffile='\\'.join(reffile.split('\\')[0:-1])+'\\'+str(start)+'\\'+reffile.split('\\')[-1]
+		reffile='\\'.join(reffile.split('\\')[0:-1])+'\\0000\\'+reffile.split('\\')[-1]
+
+		print(reffile)
+		# collect realizations
+		collectRealizations_postFail(reffile,fixedLHSpath,start,nSim,P0,tISO,SW_probabMaterial)
+		
+	elif Action == 'specificCases':
+		## caclulation of specific cases - e.g. known issues
+
+		# main reffile path and LHS data path
+		reffile="C:\\Users\\rvcoile\\Documents\\Workers\\Probab2\\reffileFull.in"	
+		fixedLHSpath='C:\\Users\\rvcoile\\Google Drive\\Research\\Codes\\refValues\\LHScenter_10000_6var.xlsx'
+
+		## simulations
+		# simSeries=[306]
+		filepath="C:\\Users\\rvcoile\\OneDrive - UGent\\CalcCenter\\Results\\ISOcc120min\\outputFull.xlsx"
+		simSeries=pd.read_excel(filepath,'issueList'); simSeries=simSeries['sim'].values
+		print(simSeries)
+
+		## calculation parameters
+		P0=10*10**6 # [N]
+		tISO=120*60 # [s]
+		SW_probabMaterial=True
+
+		# specific realization calculations
+		runSpecificCases(reffile,fixedLHSpath,simSeries,P0,tISO,SW_probabMaterial,nProc=1)		
+
+
+
